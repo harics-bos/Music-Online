@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="music3" default="compile" basedir=".">
+
+	<property environment="env" />
+	<property name="CATALINA_HOME" value="${env.CATALINA_HOME}" />
+	<property name="TOMCAT_URL" value="${env.TOMCAT_URL}" />
+	<property name="deploy.dir" value="${CATALINA_HOME}/webapps/${ant.project.name}" />
+
+	<property name="database.dir" value="database" />
+	<property name="src.dir" value="src" />
+	<property name="webinf.dir" value="WebContent/WEB-INF" />
+	<property name="classes.dir" value="${webinf.dir}/classes" />
+	<property name="lib.dir" value="${webinf.dir}/lib" />
+	
+	<property name="clientserver-lib.dir" value="lib" />
+	<property name="ORACLE_URL" value="jdbc:oracle:thin:@${env.ORACLE_SITE}"/>
+	<property name="MYSQL_URL" value = "jdbc:mysql://${env.MYSQL_SITE}/${env.MYSQL_USER}db"/>
+	<property name="JAVAAGENT" value="-javaagent:${lib.dir}/eclipselink.jar"/>
+
+	<path id="project.classpath">
+		<pathelement location="${classes.dir}" />
+		<fileset dir="${lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+		<fileset dir="${clientserver-lib.dir}">
+			<include name="**/*.jar" />
+		</fileset>
+		<pathelement location="${CATALINA_HOME}/lib/servlet-api.jar" />
+	</path>
+
+	<target name="clean" description="Clean up the derived files">
+		<delete dir="${classes.dir}" />
+		<delete>
+			<fileset dir="${basedir}">
+				<include name="TEST*.txt" />
+			</fileset>
+		</delete>
+	</target>
+
+	<target name="compile">
+		<mkdir dir="${classes.dir}" />
+		<javac srcdir="${src.dir}" debug="on" destdir="${classes.dir}" classpathref="project.classpath">
+			<compilerarg value="-Xlint:deprecation" />
+		</javac>
+	</target>
+
+	<target name="build" depends="compile" />
+
+	<target name="reload-all" depends="reload-oradb, reload-mysqldb, 
+		reload-hsqldb" />
+	<target name="reload-oradb">
+		<ant dir="database" target="drop-oradb" />
+		<ant dir="database" target="load-oradb" />
+	</target>
+	<target name="reload-mysqldb">
+		<ant dir="database" target="drop-mysqldb" />
+		<ant dir="database" target="load-mysqldb" />
+	</target>
+	<target name="reload-hsqldb">
+		<ant dir="database" target="drop-hsqldb" />
+		<ant dir="database" target="load-hsqldb" />
+	</target>
+
+	
+	<target name="config-clientserver-oradb" depends="build">
+		<echo message="Configuring Project for Oracle, putting its persistence.xml on classpath" />
+		<echo message="Using Username : ${env.ORACLE_USER}, and Password : ${env.ORACLE_PW}, also site" />
+	
+		<filter token="username" value="${env.ORACLE_USER}" />
+		<filter token="password" value="${env.ORACLE_PW}" />
+		<filter token="oracle_url" value="${ORACLE_URL}" />
+		<filter token="oraclesite" value="${env.ORACLE_SITE}" />
+		<copy file="database/oracle/persistence.xml" todir="${src.dir}/META-INF" filtering="true" overwrite="true" />
+		<copy file="database/oracle/persistence.xml" todir="${classes.dir}/META-INF" filtering="true" overwrite="true" />
+		<echo file="currentdb.txt" message="oradb" />
+		<delete file="web.flag" />
+		<touch file="clientserver.flag" />
+	</target>
+	<target name="config-clientserver-mysqldb" depends="build">
+		<echo message="Configuring Project for MySql, putting its persistence.xml on classpath" />
+		<echo message="Using Username : ${env.MYSQL_USER}, and Password : ${env.MYSQL_PW}" />
+		
+		<filter token="username" value="${env.MYSQL_USER}" />
+		<filter token="password" value="${env.MYSQL_PW}" />
+		<filter token="mysql_url" value="${MYSQL_URL}" />
+		<filter token="mysqlsite" value="${env.MYSQL_SITE}" />
+		<copy file="database/mysql/persistence.xml" todir="${src.dir}/META-INF" filtering="true" overwrite="true" />
+		<copy file="database/mysql/persistence.xml" todir="${classes.dir}/META-INF" filtering="true" overwrite="true" />
+		<echo file="currentdb.txt" message="mysqldb" />
+		<delete file="web.flag" />
+		<touch file="clientserver.flag" />
+	</target>
+	<target name="config-clientserver-hsqldb" depends="build">
+		<echo message="Configuring Project for HSQLDB, putting its persistence.xml on classpath" />
+		
+		<copy file="database/hsql/persistence.xml" todir="${src.dir}/META-INF" overwrite="true" />
+		<copy file="database/hsql/persistence.xml" todir="${classes.dir}/META-INF" overwrite="true" />
+		<echo file="currentdb.txt" message="hsqldb" />
+		<delete file="web.flag" />
+		<touch file="clientserver.flag" />
+	</target>
+	<target name="config-web-oradb" depends="build">
+		<copy file="database/oracle/web-persistence.xml" tofile="${src.dir}/META-INF/persistence.xml" overwrite="true" />
+		<copy file="database/oracle/web-persistence.xml" tofile="${classes.dir}/META-INF/persistence.xml" overwrite="true" />
+		<echo file="currentdb.txt" message="oradb" />
+		<delete file="clientserver.flag" />
+		<touch file="web.flag" />
+	</target>
+	<target name="config-web-mysqldb" depends="build">
+		<copy file="database/mysql/web-persistence.xml" tofile="${src.dir}/META-INF/persistence.xml" overwrite="true" />
+		<copy file="database/mysql/web-persistence.xml" tofile="${classes.dir}/META-INF/persistence.xml" overwrite="true" />
+		<delete file="clientserver.flag" />
+		<echo file="currentdb.txt" message="mysqldb" />
+		<touch file="web.flag" />
+	</target>
+	<target name="config-web-hsqldb" depends="build">
+		<copy file="database/hsql/web-persistence.xml" tofile="${src.dir}/META-INF/persistence.xml" overwrite="true" />
+		<copy file="database/hsql/web-persistence.xml" tofile="${classes.dir}/META-INF/persistence.xml" overwrite="true" />
+		<delete file="clientserver.flag" />
+		<echo file="currentdb.txt" message="hsqldb" />
+		<touch file="web.flag" />
+	</target>
+
+	<target name="config-check-clientserver">
+		<available file="${classes.dir}/META-INF/persistence.xml" property="configOK" />
+		<available file="clientserver.flag" property="csSetup" />
+		<fail message="You need to run ant config-clientserver-xxxdb" unless="configOK" />
+		<fail message="You need to run ant config-clientserver-xxxdb (not config-web-xxxdb)" unless="csSetup" />
+		<loadfile property="currentdb" srcFile="currentdb.txt" />
+		<echo message="config-check-clientserver: JPA is set up for client-server use with ${currentdb}" />
+	</target>
+
+	<target name="config-check-web">
+		<available file="${classes.dir}/META-INF/persistence.xml" property="configOK" />
+		<available file="web.flag" property="webSetup" />
+		<fail message="You need to run ant config-web-xxxdb" unless="configOK" />
+		<fail message="You need to run ant config-web-xxxdb (not config-clientserver-xxxdb)" unless="webSetup" />
+		<loadfile property="currentdb" srcFile="currentdb.txt" />
+		<echo message="config-check-web: JPA is set up for web use with ${currentdb}" />
+	</target>
+
+	<target name="testDAO" depends="testDAO1,testDAO2" />
+	<target name="testDAO1" depends="build, config-check-clientserver">
+	    <echo message="testDAO1...OK...Details in file TEST-*.txt"/>
+		<junit fork="yes" printsummary="yes">
+		    <jvmarg value="${JAVAAGENT}"/>
+			<formatter type="brief" />
+			<test name="cs636.music.dao.DownloadDAOTest" />
+			<classpath refid="project.classpath" />
+		</junit>
+	</target>
+	<target name="testDAO2" depends="build, config-check-clientserver">
+	    <echo message="testDAO1...OK....Details in file TEST-*.txt"/>
+		<junit fork="yes" printsummary="yes">
+		    <jvmarg value="${JAVAAGENT}"/>
+			<formatter type="brief" />
+			<test name="cs636.music.dao.ProductDAOTest" />
+			<classpath refid="project.classpath" />
+		</junit>
+	</target>
+	<target name="sysTest" depends="build, config-check-clientserver">
+		<java fork="yes" classname="cs636.music.presentation.SystemTest" failonerror="true">
+			<classpath refid="project.classpath" />
+			<jvmarg value="${JAVAAGENT}"/>
+			<arg file="test.dat" />
+		</java>
+	</target>
+
+	
+	<target name="webTest1">
+		<echo message="Running WGET for Page welcome.html" />
+		<exec executable="wget">
+			<arg line="${TOMCAT_URL}/${ant.project.name}/welcome.html" />
+		</exec>
+	</target>
+
+	<target name="webTest2">
+		<echo message="Running Product Test ..." />
+		<exec executable="wget">
+			<arg line="${TOMCAT_URL}/${ant.project.name}/productInfo.jsp?prodId=1&amp;prodCode=8601" />
+		</exec>
+	</target>
+	
+	
+	<target name="webSysTest">
+		<echo message="Running WGET for SysTestServlet" />
+		<exec executable="wget">
+			<arg line="${TOMCAT_URL}/${ant.project.name}/servlet/SystemTest" />
+		</exec>
+	</target>
+
+	
+	<target name="deploy" depends="build, config-check-web">
+		<delete dir="${deploy.dir}" />
+		<copy todir="${deploy.dir}">
+			<fileset dir="WebContent" />
+		</copy>
+	</target>
+
+</project>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
