@@ -1,9 +1,5 @@
 # Music-Online
 
-System: topcat.cs.umb.edu
-Port: Hari  - 51300
-      
-
 Email: hariharan.sridhar001@umb.edu;
        
         
